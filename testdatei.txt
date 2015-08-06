@@ -1,0 +1,6 @@
+du hast vorher noch nix da hochgeladen,da du musst den branch erstmal komplett publishen...
+
+
+das dauert jetzt ne weile
+der selbe button ist später zum syncen
+also da wo jetzt "publish" sthet
