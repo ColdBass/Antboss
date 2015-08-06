@@ -1,0 +1,270 @@
+﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+public class node : MonoBehaviour {
+
+
+
+
+  public bool connected_with_res;
+  public int connected_res_id;
+
+
+	public Vector3 node_pos;
+	public int node_id;
+	public List<int> neighbours;
+	public List<wp_edges> node_edges;
+	public bool visited;
+	public float distance;
+	public int ancestor;
+	public bool tagged;
+
+	public bool discoveres_by_scout = false;
+	public bool is_base_node;
+
+	public void calc_neighbour_distance(){
+		
+		node_edges.Clear ();
+		foreach (int n in neighbours) {
+			Vector3 neighbour_pos =  GameObject.Find(vars.wp_node_name + "_" + n).GetComponent<node>().node_pos;
+			float dist = Vector3.Distance(node_pos, neighbour_pos);
+			//Debug.Log("from node " + node_id +  " to " + n + " : Distance = " + dist);
+			int edge_id = node_edges.Count;
+			wp_edges wp_tmp = new wp_edges(edge_id  ,node_id, n, dist);
+			node_edges.Add(wp_tmp);
+			//node_edges[edge_id].debug_edge_info();
+		}
+		
+		
+	}
+	
+	
+	
+	//get edge to neigbour
+	
+	
+	public float get_edge_weight(int neig){
+		
+	//	bool tmp = false;
+		
+		foreach (wp_edges ed in node_edges) {
+			if(ed.dest_id == neig && ed.source_id == this.node_id){
+			//	tmp = true;
+				return ed.weight;
+			}
+		//	Debug.Log(ed.dest_id + "  ->  "+neig + "     :    " + ed.source_id + "   ->  " + this.node_id +"    W:"+ed.weight);
+		}
+
+		return -1f;
+		
+	}
+
+
+	public GameObject wp_node_tower_mesh;
+	public GameObject wp_node_base_mesh;
+
+
+
+
+	public GameObject inner_circle_object;
+	public GameObject outher_cirlce_object;
+
+	public Vector3 v;
+	public GameObject cursor;
+  	public Vector3 mesh_line_offset = new Vector3(0f, 1f, 0f);
+	public bool is_selected;
+	public int prev_node;
+	public bool is_last_node;
+	public bool is_first_node;
+	public bool can_be_selected; //
+	public bool is_mouse_in_node_range;
+	public Vector3 curr_pos_in_circle;
+  	public GameObject wp_way_holder;
+	public GameObject click_collider;
+	public bool call_const = false;
+
+
+	public void node_const(Vector3 _node_pos, int _node_id, int _prev_node, bool fic = true){
+		//is_first_inferface_connected = fic;
+		prev_node = _prev_node;
+		node_id = _node_id;
+		call_const = true;
+		node_pos = _node_pos;
+		this.transform.position = node_pos;
+		this.name = vars.wp_node_name + "_" + _node_id;
+	 discoveres_by_scout = false;
+    //res 
+    connected_with_res = false;
+    connected_res_id = -1;
+	}
+
+
+
+
+
+	void Awake(){
+		distance = Mathf.Infinity;
+	}
+
+
+	// Use this for initialization
+	void Start () {
+		if(call_const){
+			set_circle_pos(node_pos);
+		}
+
+	
+	
+
+	}
+
+
+
+
+
+
+	// Update is called once per frame
+	void FixedUpdate () {
+    this.transform.position = node_pos;
+
+
+
+
+ 
+       if (!is_base_node)
+      {
+
+        if (connected_with_res && connected_res_id >= 0)
+        {
+          wp_node_tower_mesh.gameObject.SetActive(false);
+          wp_node_base_mesh.gameObject.SetActive(false);
+        }
+        else
+        {
+
+
+
+          if (discoveres_by_scout)
+          {
+            wp_node_tower_mesh.gameObject.SetActive(true);
+            wp_node_base_mesh.gameObject.SetActive(true);
+          }
+          else
+          {
+            wp_node_tower_mesh.gameObject.SetActive(false);
+            wp_node_base_mesh.gameObject.SetActive(true);
+          }
+
+
+
+
+        }
+
+
+
+
+      }
+      else
+      {
+        wp_node_tower_mesh.gameObject.SetActive(false);
+        wp_node_base_mesh.gameObject.SetActive(true);
+
+			//click_collider.gameObject = GameObject.Find(vars.base_name).gameObject;
+
+      }
+
+
+		if (node_id > 1 && discoveres_by_scout) {
+//			Vector3 _pre_node_pos = GameObject.Find (vars.path_manager_name).GetComponent<pathmanager> ().get_node_pos (prev_node);
+		//	wp_way_holder.GetComponent<wp_visible_way> ().visible = true;
+		//	wp_way_holder.GetComponent<wp_visible_way> ().start_pos = _pre_node_pos + mesh_line_offset;
+		//	wp_way_holder.GetComponent<wp_visible_way> ().end_pos = node_pos;
+
+
+		} else {
+			//wp_way_holder.GetComponent<wp_visible_way>().visible = true;
+		}
+
+
+			if (is_selected) {
+			enable_circle(); //enable circle
+			set_circle_pos(node_pos);
+
+				Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
+				RaycastHit hit;
+				if (Physics.Raycast (ray, out hit)) {
+				//	is_mouse_in_node_range = c.draw_point_on_circle (hit.point);
+				is_mouse_in_node_range = is_mouse_in_range(hit.point);
+				curr_pos_in_circle = hit.point; //save the mouse pos fpr the pathmanager
+
+				if(hit.collider.tag == vars.environment_tag || hit.collider.tag == vars.wp_node_tag){
+					is_mouse_in_node_range = false;
+					//is_selected = false;
+				}
+
+				//Debug.Log(is_mouse_in_node_range);
+				if(is_mouse_in_node_range){
+				cursor.gameObject.SetActive(true);
+				cursor.gameObject.transform.position = hit.point;
+				}else{
+				cursor.gameObject.SetActive(false);
+				}
+				}		
+			} else {
+			disbale_circle();
+			}
+
+
+
+
+	}
+
+
+
+	void enable_circle(){
+		inner_circle_object.gameObject.GetComponent<selection_circle> ().circle_enabled = true;
+		outher_cirlce_object.gameObject.GetComponent<selection_circle> ().circle_enabled = true;
+	}
+
+	void disbale_circle(){
+		inner_circle_object.gameObject.GetComponent<selection_circle> ().circle_enabled = false;
+		outher_cirlce_object.gameObject.GetComponent<selection_circle> ().circle_enabled = false;
+	}
+
+	bool is_mouse_in_range(Vector3 _pos){
+
+		//nicht in inner circle aber innerhalb des äusernen
+
+		if (!inner_circle_object.gameObject.GetComponent<selection_circle> ().is_point_in_circle (_pos) && outher_cirlce_object.gameObject.GetComponent<selection_circle> ().is_point_in_circle (_pos)) {
+			return true;
+		} else {
+			return false;
+		}
+
+
+
+	}
+
+	void set_circle_pos(Vector3 _pos){
+
+		inner_circle_object.gameObject.GetComponent<selection_circle> ().cirlce_offset = _pos;
+		outher_cirlce_object.gameObject.GetComponent<selection_circle> ().cirlce_offset = _pos;
+	}
+
+	bool is_circle_enabled(){
+		if (inner_circle_object.gameObject.GetComponent<selection_circle> ().enabled && outher_cirlce_object.gameObject.GetComponent<selection_circle> ().enabled) {
+			return true;
+		} else {
+			return false;
+		}
+
+
+	}
+
+
+
+
+
+
+
+}
